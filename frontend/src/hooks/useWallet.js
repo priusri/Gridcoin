@@ -23,11 +23,11 @@ export function WalletProvider({ children }) {
     setConnecting(false)
   }
 
-  function disconnect() {
+  function  disconnect() {
     setConnected(false)
   }
 
-  return createElement(
+  return  createElement(
     WalletContext.Provider,
     { value: { connected, connecting, connect, disconnect, wallet } },
     children
