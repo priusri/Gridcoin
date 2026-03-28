@@ -8,11 +8,11 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div style={{
       background: '#0d1117',
-      border: '1px solid rgba(0,245,255,0.25)',
+      border: '1px solid rgba(60, 170, 174, 0.25)',
       borderRadius: 8,
       padding: '10px 14px',
       fontSize: '0.8rem',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      boxShadow: '0 8px 24px rgba(14, 12, 12, 0.5)',
     }}>
       <div style={{
         fontFamily: 'var(--font-heading)',
@@ -70,7 +70,7 @@ export default function EnergyChart() {
           {[
             { label: 'Generated', color: '#00f5ff' },
             { label: 'Consumed',  color: '#ffd700' },
-            { label: 'Traded',    color: '#00ff88' },
+            { label: 'Traded',    color: '#54a47f' },
           ].map(({ label, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{

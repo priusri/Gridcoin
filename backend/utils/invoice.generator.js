@@ -1,0 +1,187 @@
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+
+class InvoiceGenerator {
+  /**
+   * Generate PDF invoice
+   */
+  static async generateInvoice(invoiceData, outputPath) {
+    return new Promise((resolve, reject) => {
+      try {
+        // Create invoice directory if it doesn't exist
+        const invoiceDir = path.dirname(outputPath);
+        if (!fs.existsSync(invoiceDir)) {
+          fs.mkdirSync(invoiceDir, { recursive: true });
+        }
+
+        const doc = new PDFDocument({
+          margin: 50,
+        });
+
+        const stream = fs.createWriteStream(outputPath);
+
+        doc.pipe(stream);
+
+        // Header
+        doc.fontSize(20).font('Helvetica-Bold').text('INVOICE', { align: 'center' });
+        doc.moveDown(0.5);
+
+        // Invoice details
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`);
+        doc.text(`Issue Date: ${new Date(invoiceData.issuedDate).toLocaleDateString()}`);
+        if (invoiceData.dueDate) {
+          doc.text(`Due Date: ${new Date(invoiceData.dueDate).toLocaleDateString()}`);
+        }
+        doc.moveDown();
+
+        // Company info (left) and Customer info (right)
+        doc.fontSize(11).font('Helvetica-Bold').text('Bill From:', 0, 150);
+        doc.fontSize(10).font('Helvetica');
+        doc.text('Gridcoin Energy Trading Platform', 50);
+        doc.text('support@gridcoin.io', 50);
+        doc.text('www.gridcoin.io', 50);
+
+        doc.fontSize(11).font('Helvetica-Bold').text('Bill To:', 300, 150);
+        doc.fontSize(10).font('Helvetica');
+        doc.text(invoiceData.customerName, 300);
+        doc.text(invoiceData.customerEmail, 300);
+        if (invoiceData.customerPhone) {
+          doc.text(invoiceData.customerPhone, 300);
+        }
+
+        doc.moveDown(2);
+
+        // Items table
+        const tableTop = 250;
+        const col1 = 50;
+        const col2 = 250;
+        const col3 = 350;
+        const col4 = 450;
+
+        // Table header
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text('Description', col1, tableTop);
+        doc.text('Qty', col2, tableTop);
+        doc.text('Unit Price', col3, tableTop);
+        doc.text('Amount', col4, tableTop);
+
+        // Horizontal line
+        doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+
+        // Table rows
+        doc.fontSize(9).font('Helvetica');
+        let yPosition = tableTop + 30;
+
+        invoiceData.items.forEach((item) => {
+          doc.text(item.description, col1, yPosition);
+          doc.text(item.quantity.toString(), col2, yPosition);
+          doc.text(`₹${item.unitPrice.toFixed(2)}`, col3, yPosition);
+          doc.text(`₹${item.amount.toFixed(2)}`, col4, yPosition);
+          yPosition += 20;
+        });
+
+        // Total line
+        doc.moveTo(col1, yPosition).lineTo(550, yPosition).stroke();
+        yPosition += 10;
+
+        // Totals
+        doc.fontSize(10).font('Helvetica');
+        doc.text('Subtotal:', col3, yPosition);
+        doc.text(`₹${invoiceData.subtotal.toFixed(2)}`, col4, yPosition);
+
+        yPosition += 20;
+        if (invoiceData.tax > 0) {
+          doc.text(`Tax (${invoiceData.taxPercentage || 0}%):`, col3, yPosition);
+          doc.text(`₹${invoiceData.tax.toFixed(2)}`, col4, yPosition);
+          yPosition += 20;
+        }
+
+        // Grand total
+        doc.fontSize(11).font('Helvetica-Bold');
+        doc.text('Total:', col3, yPosition);
+        doc.text(`₹${invoiceData.total.toFixed(2)}`, col4, yPosition);
+
+        // Notes
+        if (invoiceData.notes) {
+          doc.moveDown(2);
+          doc.fontSize(10).font('Helvetica-Bold').text('Notes:');
+          doc.fontSize(9).font('Helvetica').text(invoiceData.notes);
+        }
+
+        // Footer
+        doc.moveDown(2);
+        doc.fontSize(8).font('Helvetica').text('Thank you for your business!', { align: 'center' });
+        doc.text('Payment ID: ' + invoiceData.paymentId, { align: 'center' });
+
+        doc.end();
+
+        stream.on('finish', () => {
+          resolve(outputPath);
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Generate invoice data from payment and user info
+   */
+  static prepareInvoiceData(payment, user, invoiceNumber) {
+    return {
+      invoiceNumber,
+      issuedDate: new Date(),
+      dueDate: null,
+      customerName: user.name,
+      customerEmail: user.email,
+      customerPhone: user.phone || '',
+      items: [
+        {
+          description: payment.description || `${payment.type} - Energy Trading`,
+          quantity: 1,
+          unitPrice: payment.amount,
+          amount: payment.amount,
+        },
+      ],
+      subtotal: payment.amount,
+      tax: 0,
+      taxPercentage: 0,
+      total: payment.amount,
+      paymentId: payment.razorpayPaymentId,
+      notes: `Payment Status: ${payment.status}\nPayment Method: ${payment.paymentMethod}`,
+    };
+  }
+
+  /**
+   * Generate subscription invoice
+   */
+  static prepareSubscriptionInvoiceData(subscription, user, invoiceNumber) {
+    const amount = subscription.amount;
+    return {
+      invoiceNumber,
+      issuedDate: new Date(),
+      dueDate: null,
+      customerName: user.name,
+      customerEmail: user.email,
+      customerPhone: user.phone || '',
+      items: [
+        {
+          description: `${subscription.plan} Plan - ${subscription.billingPeriod}`,
+          quantity: 1,
+          unitPrice: amount,
+          amount: amount,
+        },
+      ],
+      subtotal: amount,
+      tax: 0,
+      taxPercentage: 0,
+      total: amount,
+      paymentId: subscription.razorpaySubscriptionId,
+      notes: `Subscription Status: ${subscription.status}\nBilling Period: ${subscription.billingPeriod}`,
+    };
+  }
+}
+
+module.exports = InvoiceGenerator;

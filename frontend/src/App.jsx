@@ -6,6 +6,7 @@ import Marketplace from './pages/Marketplace'
 import MyEnergy from './pages/MyEnergy'
 import Transactions from './pages/Transactions'
 import Wallet from './pages/Wallet'
+import PaymentSuccess from './pages/PaymentSuccess'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="transactions" element={<Transactions />} />
             <Route path="wallet" element={<Wallet />} />
           </Route>
+          <Route path="payment-success" element={<PaymentSuccess />} />
         </Routes>
       </BrowserRouter>
     </WalletProvider>

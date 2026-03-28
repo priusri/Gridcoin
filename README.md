@@ -11,7 +11,7 @@ middlemen and enabling fair, transparent energy trading.
 
 ---
 
-## 🧩 The Problem
+##  The Problem
 
 Solar panel owners in India generate surplus energy every day.
 Utility companies (BESCOM, TNEB) buy it at ₹2/kWh and resell it at ₹8/kWh.
@@ -22,7 +22,7 @@ There is no direct way to trade energy between individuals.
 
 ---
 
-## ✅ The Solution
+##  The Solution
 
 - Solar owners list their surplus energy on the GridCoin marketplace
 - Nearby buyers purchase directly at a mutually agreed price
@@ -32,7 +32,7 @@ There is no direct way to trade energy between individuals.
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 | Technology | Purpose |
@@ -68,6 +68,14 @@ There is no direct way to trade energy between individuals.
 | Scikit-learn | Price prediction model |
 | Pandas + NumPy | Data processing |
 | NREL / Kaggle datasets | Training data |
+
+### Payment Processing
+| Technology | Purpose |
+|---|---|
+| Stripe | Payment gateway |
+| Stripe Checkout | Hosted payment page |
+| Stripe Billing Portal | Subscription management |
+| Stripe Webhooks | Real-time payment events |
 
 ---
 
@@ -153,7 +161,36 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
 SEPOLIA_RPC_URL=your_alchemy_or_infura_url
 PRIVATE_KEY=your_wallet_private_key
+
+# Stripe Payment Configuration
+STRIPE_PUBLIC_KEY=pk_test_your_key_here
+STRIPE_SECRET_KEY=sk_test_your_key_here
+STRIPE_WEBHOOK_SECRET=whsec_test_your_key_here
+
+# Frontend URL for payment success/cancel redirects
+FRONTEND_URL=http://localhost:3000
 ```
+
+### Payment Setup
+
+GridCoin uses **Stripe** for secure payment processing:
+
+1. **One-time Payments** — Buy energy directly
+2. **Recurring Billing** — Monthly subscription plans
+3. **Invoicing** — Automatic invoice generation
+4. **Refunds** — Handle payment disputes
+5. **Billing Portal** — Customer self-service management
+
+**Quick Start**:
+```bash
+# 1. Get Stripe API keys from https://dashboard.stripe.com
+# 2. Add keys to backend/.env
+# 3. Add public key to frontend/.env
+# 4. Run npm install in backend (stripe package)
+# 5. Test with card: 4242 4242 4242 4242
+```
+
+Full guide: [Stripe Quick Start](docs/STRIPE_QUICK_START.md) | [Complete Guide](docs/STRIPE_INTEGRATION_GUIDE.md)
 
 ---
 

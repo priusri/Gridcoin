@@ -2,25 +2,46 @@ import { useState } from 'react'
 import { X, Zap, Leaf } from 'lucide-react'
 import GlowButton from '../shared/GlowButton'
 import LoadingSpinner from '../shared/LoadingSpinner'
+import { usePayment } from '../../hooks/usePayment'
 
 const GRD_RATE = 5.2 // 1 GRD = ₹5.2
+const USD_RATE = 0.012 // Approximate ₹1 = $0.012
 
 export default function BuyModal({ listing, onClose, onConfirm }) {
   const [kWh, setKWh] = useState(1)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const { createCheckoutSession, redirectToCheckout, error } = usePayment()
 
   const total   = parseFloat((kWh * listing.pricePerKWh).toFixed(2))
   const grd     = parseFloat((total / GRD_RATE).toFixed(2))
   const co2     = parseFloat((kWh * 0.82).toFixed(2)) // 0.82 kg saved per kWh solar
+  const amountUSD = Math.round(total * USD_RATE * 100) // Convert to USD cents
 
   async function handleConfirm() {
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1500))
-    setLoading(false)
-    setSuccess(true)
-    onConfirm({ listing, kWh, total, grd })
-    setTimeout(onClose, 2000)
+    try {
+      const response = await createCheckoutSession(
+        amountUSD,
+        'purchase',
+        {
+          energyListingId: String(listing._id || listing.id),
+          sellerId: listing.sellerId || listing.seller,
+          kWh: kWh,
+          pricePerKWh: listing.pricePerKWh,
+          location: listing.location,
+          description: `Energy purchase: ${kWh} kWh from ${listing.seller}`,
+          paymentMethod: 'credit_card'
+        }
+      )
+      
+      if (response && (response.checkoutUrl || response.sessionId)) {
+        await redirectToCheckout(response.checkoutUrl || response.sessionId)
+      }
+    } catch (err) {
+      setLoading(false)
+      alert('Payment error: ' + (error || err.message))
+    }
   }
 
   return (
@@ -61,40 +82,7 @@ export default function BuyModal({ listing, onClose, onConfirm }) {
           </button>
         </div>
 
-        {success ? (
-          /* Success state */
-          <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <div style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              background: 'rgba(0,255,136,0.12)',
-              border: '2px solid var(--accent-green)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px',
-              fontSize: '2rem',
-              boxShadow: '0 0 24px rgba(0,255,136,0.3)',
-              animation: 'scaleIn 0.4s ease',
-            }}>
-              ✓
-            </div>
-            <h3 style={{
-              fontFamily: 'var(--font-heading)',
-              color: 'var(--accent-green)',
-              letterSpacing: '0.1em',
-              marginBottom: 8,
-            }}>
-              TRANSACTION SENT
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-              {kWh} kWh purchased for ₹{total}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Price summary */}
+        {/* Price summary */}
             <div style={{
               background: 'rgba(0,245,255,0.04)',
               border: '1px solid rgba(0,245,255,0.12)',
@@ -201,8 +189,6 @@ export default function BuyModal({ listing, onClose, onConfirm }) {
                 <><Zap size={14} /> CONFIRM TRANSACTION</>
               )}
             </GlowButton>
-          </>
-        )}
       </div>
     </div>
   )

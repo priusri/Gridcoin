@@ -31,7 +31,7 @@ export default function TokenBalance({ symbol, value, unit = '', color = '#00f5f
             fontSize: '0.6rem',
             background: 'rgba(255,215,0,0.12)',
             color: 'var(--accent-yellow)',
-            border: '1px solid rgba(255,215,0,0.3)',
+            border: '1px solid rgba(252, 216, 13, 0.3)',
             borderRadius: 4,
             padding: '2px 6px',
             fontFamily: 'var(--font-heading)',
