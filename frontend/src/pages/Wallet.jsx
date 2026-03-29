@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import ConnectButton from '../components/wallet/ConnectButton'
 import TokenBalance from '../components/wallet/TokenBalance'
-import GlowButton from '../components/shared/GlowButton'
+import GlowButton from '../components/Shared/GlowButton'
 import { useWallet } from '../hooks/useWallet'
 import { walletData, grdEarnings } from '../data/mockData'
 

@@ -3,9 +3,9 @@ import { Sun, Zap, Battery, Edit2, X, CheckCircle } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts'
-import StatCard from '../components/shared/StatCard'
-import GlowButton from '../components/shared/GlowButton'
-import Badge from '../components/shared/Badge'
+import StatCard from '../components/Shared/StatCard'
+import GlowButton from '../components/Shared/GlowButton'
+import Badge from '../components/Shared/Badge'
 import { weeklyGeneration, myListings as seedListings } from '../data/mockData'
 
 function ToastNotification({ message }) {
