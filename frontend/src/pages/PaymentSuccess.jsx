@@ -164,8 +164,7 @@ export default function PaymentSuccess() {
                   justifyContent: 'center',
                   gap: '8px',
                   fontSize: '14px',
-                  transition: 'all 0.3s ease',
-                  fontSize: '13px'
+                  transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = 'rgba(0, 245, 255, 0.15)'
