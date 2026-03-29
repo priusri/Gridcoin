@@ -1,5 +1,5 @@
 import { Zap } from 'lucide-react'
-import GlowButton from '../shared/GlowButton'
+import GlowButton from '../Shared/GlowButton'
 
 export default function TokenBalance({ symbol, value, unit = '', color = '#00f5ff', pending = false, onClaim }) {
   return (

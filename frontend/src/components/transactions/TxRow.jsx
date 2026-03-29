@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react'
-import Badge from '../shared/Badge'
+import Badge from '../Shared/Badge'
 
 function timeAgo(date) {
   const secs = Math.floor((Date.now() - date) / 1000)

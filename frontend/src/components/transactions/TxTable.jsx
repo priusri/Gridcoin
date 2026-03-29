@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import TxRow from './TxRow'
-import GlowButton from '../shared/GlowButton'
+import GlowButton from '../Shared/GlowButton'
 import { Download } from 'lucide-react'
 
 const TABS = ['all', 'buy', 'sell', 'pending', 'failed']

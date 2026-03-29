@@ -1,5 +1,5 @@
 import { MapPin, Star, Zap } from 'lucide-react'
-import GlowButton from '../shared/GlowButton'
+import GlowButton from '../Shared/GlowButton'
 
 function GreenRing({ score }) {
   const r = 18

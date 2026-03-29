@@ -1,6 +1,6 @@
 import { useWallet } from '../../hooks/useWallet'
-import GlowButton from '../shared/GlowButton'
-import LoadingSpinner from '../shared/LoadingSpinner'
+import GlowButton from '../Shared/GlowButton'
+import LoadingSpinner from '../Shared/LoadingSpinner'
 import { Wallet } from 'lucide-react'
 
 export default function ConnectButton() {
