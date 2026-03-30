@@ -3,6 +3,15 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 
+// ====== FRESH DEPLOY MARKER ======
+console.log('\n');
+console.log('🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀');
+console.log('🔥 GRIDCOIN BACKEND STARTING - NEW DEPLOYMENT 🔥');
+console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+console.log('🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀');
+console.log('\n');
+// ====== END MARKER ======
+
 // Load environment variables
 dotenv.config();
 
