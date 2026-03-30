@@ -211,7 +211,7 @@ export default function PaymentSuccess() {
                 <div style={{ marginBottom: '8px' }}>
                   <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Total Amount:</span>
                   <span style={{ color: '#00ff88', float: 'right', fontWeight: 600 }}>
-                    ${(invoice.totalAmount / 100).toFixed(2)}
+                    ${(invoice.totalAmount || 0).toFixed(2)}
                   </span>
                 </div>
                 <div>
