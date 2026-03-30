@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { CheckCircle, Home, Eye, Download, AlertCircle } from 'lucide-react'
 import { usePayment } from '../hooks/usePayment'
@@ -13,10 +13,17 @@ export default function PaymentSuccess() {
   const [error, setError] = useState(null)
   const [debugInfo, setDebugInfo] = useState(null)
   const { verifyPayment } = usePayment()
+  const hasVerified = useRef(false)
 
   const sessionId = searchParams.get('session_id')
 
   useEffect(() => {
+    // Prevent duplicate verification calls
+    if (hasVerified.current) {
+      console.log('⚠️ Already verified, skipping duplicate call');
+      return;
+    }
+
     // Log everything on mount
     console.log('=== PAYMENT SUCCESS PAGE LOADED ===');
     console.log('📍 URL:', window.location.href);
@@ -34,6 +41,7 @@ export default function PaymentSuccess() {
     }
 
     if (sessionId) {
+      hasVerified.current = true; // Mark as verified to prevent retries
       console.log('🔄 Verifying payment with session:', sessionId);
       
       verifyPayment(sessionId)

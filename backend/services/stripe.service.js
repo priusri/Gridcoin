@@ -122,7 +122,7 @@ class StripeService {
           status: 'completed',
           metadata: {
             stripeCustomerId: session.customer,
-            chargeId: paymentIntent.charges.data[0]?.id,
+            chargeId: paymentIntent.charges?.data?.[0]?.id || null,
           },
         },
         { new: true }
