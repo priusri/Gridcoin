@@ -152,10 +152,20 @@ class StripeService {
       const invoiceNumber = `INV-${Date.now()}`;
       console.log('📄 Creating invoice:', invoiceNumber);
       console.log('   Payment info: amount=' + payment.amount + ', currency=' + payment.currency);
+      console.log('   User ID from payment:', payment.user?._id);
+      console.log('   User object:', payment.user);
       
       let invoice = null;
       try {
-        invoice = await Invoice.create({
+        // Verify required fields
+        if (!payment.user || !payment.user._id) {
+          throw new Error('Payment user is not populated or missing _id');
+        }
+        if (!payment._id) {
+          throw new Error('Payment ID is missing');
+        }
+
+        const invoiceData = {
           user: payment.user._id,
           invoiceNumber,
           payment: payment._id,
@@ -172,17 +182,18 @@ class StripeService {
               amount: payment.amount,
             },
           ],
-        });
+        };
+
+        console.log('🎯 Invoice data to be created:', invoiceData);
+        
+        invoice = await Invoice.create(invoiceData);
         console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
       } catch (invoiceError) {
-        console.error('⚠️ Invoice creation error:', invoiceError.message);
-        console.error('⚠️ Invoice error details:', invoiceError);
-        // Don't throw, just log warning
-        invoice = {
-          _id: 'INVOICE_CREATION_FAILED',
-          invoiceNumber: invoiceNumber,
-          error: invoiceError.message
-        };
+        console.error('❌ Invoice creation error:', invoiceError.message);
+        console.error('❌ Invoice error details:', invoiceError);
+        console.error('❌ Invoice error stack:', invoiceError.stack);
+        // THROW the error instead of silently failing
+        throw new Error(`Invoice creation failed: ${invoiceError.message}`);
       }
 
       console.log('📦 Returning verification result with payment and invoice');
