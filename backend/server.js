@@ -37,6 +37,7 @@ require('./models/User');
 require('./models/Payment');
 require('./models/Invoice');
 require('./models/Subscription');
+require('./models/EnergyListing');
 
 // Import routes
 const paymentRoutes = require('./routes/payment.routes');
