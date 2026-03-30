@@ -189,14 +189,34 @@ class InvoiceGenerator {
   static async generateInvoicePDF(invoiceData) {
     return new Promise((resolve, reject) => {
       try {
+        console.log('🔧 Starting PDF generation with data:', {
+          invoiceNumber: invoiceData.invoiceNumber,
+          customerName: invoiceData.customerName,
+          itemsCount: invoiceData.items ? invoiceData.items.length : 0,
+          totalAmount: invoiceData.totalAmount,
+        });
+
         const doc = new PDFDocument({
           margin: 50,
         });
 
         const buffers = [];
-        doc.on('data', (buffer) => buffers.push(buffer));
-        doc.on('error', reject);
-        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        
+        doc.on('data', (buffer) => {
+          console.log('📦 PDF chunk received:', buffer.length, 'bytes');
+          buffers.push(buffer);
+        });
+        
+        doc.on('error', (err) => {
+          console.error('❌ PDF document error:', err);
+          reject(err);
+        });
+        
+        doc.on('end', () => {
+          const finalBuffer = Buffer.concat(buffers);
+          console.log('✅ PDF generation complete. Total size:', finalBuffer.length, 'bytes');
+          resolve(finalBuffer);
+        });
 
         // Header
         doc.fontSize(20).font('Helvetica-Bold').text('INVOICE', { align: 'center' });
@@ -204,8 +224,8 @@ class InvoiceGenerator {
 
         // Invoice details
         doc.fontSize(10).font('Helvetica');
-        doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`);
-        doc.text(`Issue Date: ${new Date(invoiceData.issuedDate).toLocaleDateString()}`);
+        doc.text(`Invoice Number: ${invoiceData.invoiceNumber || 'N/A'}`);
+        doc.text(`Issue Date: ${invoiceData.issuedDate ? new Date(invoiceData.issuedDate).toLocaleDateString() : new Date().toLocaleDateString()}`);
         if (invoiceData.dueDate) {
           doc.text(`Due Date: ${new Date(invoiceData.dueDate).toLocaleDateString()}`);
         }
@@ -220,8 +240,8 @@ class InvoiceGenerator {
 
         doc.fontSize(11).font('Helvetica-Bold').text('Bill To:', 300, 150);
         doc.fontSize(10).font('Helvetica');
-        doc.text(invoiceData.customerName, 300);
-        doc.text(invoiceData.customerEmail, 300);
+        doc.text(invoiceData.customerName || 'Customer', 300);
+        doc.text(invoiceData.customerEmail || '', 300);
         if (invoiceData.customerPhone) {
           doc.text(invoiceData.customerPhone, 300);
         }
@@ -249,12 +269,24 @@ class InvoiceGenerator {
         doc.fontSize(9).font('Helvetica');
         let yPosition = tableTop + 30;
 
-        (invoiceData.items || []).forEach((item) => {
-          doc.text((item.description || '').substring(0, 40), col1, yPosition);
-          doc.text((item.quantity || 1).toString(), col2, yPosition);
-          doc.text(`$${(item.unitPrice || 0).toFixed(2)}`, col3, yPosition);
-          doc.text(`$${(item.amount || 0).toFixed(2)}`, col4, yPosition);
-          yPosition += 20;
+        const items = invoiceData.items || [];
+        console.log('📋 Adding items to PDF:', items.length);
+        
+        items.forEach((item, index) => {
+          try {
+            const desc = (item.description || '').substring(0, 40);
+            const qty = String(item.quantity || 1);
+            const unitPrice = parseFloat(item.unitPrice || 0);
+            const amount = parseFloat(item.amount || 0);
+            
+            doc.text(desc, col1, yPosition);
+            doc.text(qty, col2, yPosition);
+            doc.text(`$${unitPrice.toFixed(2)}`, col3, yPosition);
+            doc.text(`$${amount.toFixed(2)}`, col4, yPosition);
+            yPosition += 20;
+          } catch (itemErr) {
+            console.error(`❌ Error adding item ${index}:`, itemErr.message);
+          }
         });
 
         // Total line
@@ -264,27 +296,32 @@ class InvoiceGenerator {
         // Totals
         doc.fontSize(10).font('Helvetica');
         doc.text('Subtotal:', col3, yPosition);
-        doc.text(`$${(invoiceData.subtotal || 0).toFixed(2)}`, col4, yPosition);
+        doc.text(`$${(parseFloat(invoiceData.subtotal) || 0).toFixed(2)}`, col4, yPosition);
 
         yPosition += 20;
-        if (invoiceData.tax > 0) {
+        if (parseFloat(invoiceData.tax || 0) > 0) {
           doc.text(`Tax (${invoiceData.taxPercentage || 0}%):`, col3, yPosition);
-          doc.text(`$${(invoiceData.tax || 0).toFixed(2)}`, col4, yPosition);
+          doc.text(`$${(parseFloat(invoiceData.tax) || 0).toFixed(2)}`, col4, yPosition);
           yPosition += 20;
         }
 
         // Grand total
         doc.fontSize(11).font('Helvetica-Bold');
         doc.text('Total:', col3, yPosition);
-        doc.text(`$${(invoiceData.totalAmount || invoiceData.total || 0).toFixed(2)}`, col4, yPosition);
+        const total = parseFloat(invoiceData.totalAmount || invoiceData.total || 0);
+        console.log('💰 Final total to display:', total);
+        doc.text(`$${total.toFixed(2)}`, col4, yPosition);
 
         // Footer
         doc.moveDown(2);
         doc.fontSize(8).font('Helvetica').text('Thank you for your business!', { align: 'center' });
-        doc.text(`Status: ${invoiceData.status}`, { align: 'center' });
+        doc.text(`Status: ${invoiceData.status || 'Paid'}`, { align: 'center' });
 
+        console.log('📄 Calling doc.end() to finalize PDF');
         doc.end();
       } catch (error) {
+        console.error('❌ Outer try-catch error:', error.message);
+        console.error('   Stack:', error.stack);
         reject(error);
       }
     });

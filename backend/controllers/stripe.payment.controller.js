@@ -366,19 +366,24 @@ class StripePaymentController {
   async downloadInvoicePDF(req, res) {
     try {
       const { invoiceId } = req.params;
+      console.log('📥 PDF Download Request - Invoice ID:', invoiceId);
 
       const invoice = await Invoice.findById(invoiceId)
         .populate('payment')
         .populate('user');
 
       if (!invoice) {
+        console.log('❌ Invoice not found:', invoiceId);
         return res.status(404).json({ message: 'Invoice not found' });
       }
 
-      console.log('📋 Generating PDF for invoice:', invoiceId);
-      console.log('   Invoice items:', invoice.items);
-      console.log('   Invoice amount:', invoice.amount);
-      console.log('   Invoice totalAmount:', invoice.totalAmount);
+      console.log('📋 Found invoice:', {
+        invoiceNumber: invoice.invoiceNumber,
+        user: invoice.user?.name,
+        items: invoice.items?.length || 0,
+        amount: invoice.amount,
+        totalAmount: invoice.totalAmount,
+      });
 
       // Generate invoice PDF buffer
       const InvoiceGenerator = require('../utils/invoice.generator');
@@ -391,7 +396,9 @@ class StripePaymentController {
         amount: invoice.amount || 0,
       }];
 
-      const pdfBuffer = await InvoiceGenerator.generateInvoicePDF({
+      console.log('🎨 Preparing PDF data with items:', items);
+
+      const pdfData = {
         invoiceNumber: invoice.invoiceNumber,
         issuedDate: invoice.issueDate || new Date(),
         dueDate: invoice.dueDate,
@@ -405,17 +412,28 @@ class StripePaymentController {
         totalAmount: invoice.totalAmount || invoice.amount || 0,
         currency: invoice.currency || 'USD',
         status: invoice.status || 'paid',
+      };
+
+      console.log('🚀 Calling generateInvoicePDF with:', {
+        invoiceNumber: pdfData.invoiceNumber,
+        itemCount: pdfData.items.length,
+        totalAmount: pdfData.totalAmount,
       });
+
+      const pdfBuffer = await InvoiceGenerator.generateInvoicePDF(pdfData);
+      
+      console.log('✅ PDF generated successfully. Size:', pdfBuffer.length, 'bytes');
 
       // Set response headers for PDF
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`);
       res.setHeader('Content-Length', pdfBuffer.length);
 
+      console.log('📤 Sending PDF response to client');
       res.send(pdfBuffer);
     } catch (error) {
-      console.error('PDF generation error:', error.message);
-      console.error('PDF error stack:', error.stack);
+      console.error('❌ PDF generation error:', error.message);
+      console.error('   Stack trace:', error.stack);
       res.status(500).json({
         success: false,
         message: error.message,
