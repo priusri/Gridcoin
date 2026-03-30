@@ -11,12 +11,31 @@ export default function PaymentSuccess() {
   const [payment, setPayment] = useState(null)
   const [invoice, setInvoice] = useState(null)
   const [error, setError] = useState(null)
+  const [debugInfo, setDebugInfo] = useState(null)
   const { verifyPayment } = usePayment()
 
   const sessionId = searchParams.get('session_id')
 
   useEffect(() => {
+    // Log everything on mount
+    console.log('=== PAYMENT SUCCESS PAGE LOADED ===');
+    console.log('📍 URL:', window.location.href);
+    console.log('📍 Query Params:', Object.fromEntries(searchParams));
+    console.log('📍 Session ID:', sessionId);
+    console.log('📍 Auth Token:', localStorage.getItem('authToken') ? 'EXISTS' : 'MISSING');
+    
+    if (!sessionId) {
+      const msg = '❌ NO SESSION ID IN URL!'
+      console.error(msg);
+      setError(msg);
+      setDebugInfo(`Missing session_id parameter. URL: ${window.location.href}`);
+      setLoading(false);
+      return;
+    }
+
     if (sessionId) {
+      console.log('🔄 Verifying payment with session:', sessionId);
+      
       verifyPayment(sessionId)
         .then(data => {
           console.log('✓ Verify Payment Response:', data)
@@ -29,11 +48,13 @@ export default function PaymentSuccess() {
         })
         .catch((err) => {
           console.error('✗ Verify Payment Error:', err)
+          console.error('   Message:', err.message)
           setError(err.message || 'Failed to verify payment. Please contact support.')
+          setDebugInfo(JSON.stringify(err, null, 2));
           setLoading(false)
         })
     }
-  }, [sessionId, verifyPayment])
+  }, [sessionId, verifyPayment, searchParams])
 
   return (
     <div style={{
@@ -344,6 +365,25 @@ export default function PaymentSuccess() {
             }}>
               {error || 'We couldn\'t verify your payment. Please try again or contact support.'}
             </p>
+
+            {debugInfo && (
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 100, 100, 0.2)',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '24px',
+                textAlign: 'left',
+                fontSize: '11px',
+                color: 'rgba(255, 150, 150, 1)',
+                fontFamily: 'monospace',
+                maxHeight: '150px',
+                overflow: 'auto'
+              }}>
+                <pre>{debugInfo}</pre>
+              </div>
+            )}
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
@@ -400,6 +440,7 @@ export default function PaymentSuccess() {
                 TRY AGAIN
               </button>
             </div>
+          
           </>
         )}
 
