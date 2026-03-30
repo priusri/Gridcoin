@@ -32,6 +32,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running', timestamp: new Date() });
 });
 
+// Import models to register schemas
+require('./models/User');
+require('./models/Payment');
+require('./models/Invoice');
+require('./models/Subscription');
+
 // Import routes
 const paymentRoutes = require('./routes/payment.routes');
 
