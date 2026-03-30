@@ -42,18 +42,30 @@ class StripePaymentController {
    */
   async verifyPayment(req, res) {
     try {
+      console.log('═══════════════════════════════════════');
+      console.log('🔄 VERIFY PAYMENT REQUEST RECEIVED');
+      console.log('═══════════════════════════════════════');
+      console.log('📍 Method:', req.method);
+      console.log('📍 Path:', req.path);
+      console.log('📍 URL:', req.originalUrl);
+      console.log('📍 Body:', JSON.stringify(req.body));
+      console.log('📍 Headers:', {
+        authorization: req.headers.authorization ? 'EXISTS' : 'MISSING',
+        contentType: req.headers['content-type']
+      });
+      console.log('📍 User:', req.user ? req.user._id : 'NOT AUTHENTICATED');
+      
       const { sessionId } = req.body;
 
       if (!sessionId) {
+        console.log('❌ NO SESSION ID PROVIDED');
         return res.status(400).json({ message: 'Session ID is required' });
       }
 
-      console.log('🔄 Verify Payment Request - Session ID:', sessionId);
+      console.log('🔍 Verifying session:', sessionId);
       const result = await stripeService.verifyPayment(sessionId);
       
-      console.log('✓ Verification complete. Returning result with:');
-      console.log('  - Payment ID:', result.payment?._id);
-      console.log('  - Invoice ID:', result.invoice?._id);
+      console.log('✓ Verification complete');
 
       res.status(200).json({
         success: true,
@@ -61,7 +73,9 @@ class StripePaymentController {
         data: result,
       });
     } catch (error) {
-      console.error('✗ Verify Payment Error:', error.message);
+      console.error('✗✗✗ VERIFY PAYMENT ERROR ✗✗✗');
+      console.error('Error Message:', error.message);
+      console.error('Error Stack:', error.stack);
       res.status(400).json({
         success: false,
         message: error.message,

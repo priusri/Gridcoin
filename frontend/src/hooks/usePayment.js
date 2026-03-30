@@ -71,18 +71,37 @@ export const usePayment = () => {
   const verifyPayment = useCallback(
     async (sessionId) => {
       try {
+        console.log('═══════════════════════════════════════');
+        console.log('🔄 VERIFY PAYMENT HOOK CALLED');
+        console.log('═══════════════════════════════════════');
+        console.log('📍 Session ID:', sessionId);
+        console.log('📍 API URL:', apiUrl);
+        console.log('📍 Auth Token:', token ? `${token.substring(0, 20)}...` : 'MISSING');
+        console.log('📍 Request Headers:', headers);
+        
         setLoading(true);
         setError(null);
 
+        console.log('🚀 Making POST request to:', `${apiUrl}/payments/verify`);
         const response = await axios.post(
           `${apiUrl}/payments/verify`,
           { sessionId },
           { headers }
         );
 
+        console.log('✓ Response received:');
+        console.log('  Status:', response.status);
+        console.log('  Data:', response.data);
+
         setPayment(response.data.data);
         return response.data.data;
       } catch (err) {
+        console.error('✗✗✗ VERIFY PAYMENT ERROR ✗✗✗');
+        console.error('Error:', err);
+        console.error('Status:', err.response?.status);
+        console.error('Response Data:', err.response?.data);
+        console.error('Message:', err.message);
+        
         const errorMsg = err.response?.data?.message || err.message;
         setError(errorMsg);
         throw new Error(errorMsg);
@@ -90,7 +109,7 @@ export const usePayment = () => {
         setLoading(false);
       }
     },
-    [apiUrl, headers]
+    [apiUrl, headers, token]
   );
 
   /**
