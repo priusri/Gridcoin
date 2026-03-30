@@ -98,6 +98,9 @@ class StripeService {
    */
   async verifyPayment(stripeSessionId) {
     try {
+      console.log('═══════════════════════════════════════');
+      console.log('🔍 VERIFYING PAYMENT - FRESH DEPLOY');
+      console.log('═══════════════════════════════════════');
       console.log('🔍 Verifying payment for session:', stripeSessionId);
       
       const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
