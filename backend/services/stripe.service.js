@@ -1,3 +1,8 @@
+// Validate Stripe API key is set
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+}
+
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Payment = require('../models/Payment');
 const Subscription = require('../models/Subscription');
@@ -96,12 +101,32 @@ class StripeService {
   /**
    * Retrieve payment intent to verify payment
    */
-  async verifyPayment(stripeSessionId) {
+  async verifyPayment(stripeSessionId, authenticatedUser) {
     try {
       console.log('═══════════════════════════════════════');
       console.log('🔍 VERIFYING PAYMENT - FRESH DEPLOY');
       console.log('═══════════════════════════════════════');
       console.log('🔍 Verifying payment for session:', stripeSessionId);
+      console.log('🔐 Authenticated User:', authenticatedUser ? authenticatedUser._id : 'NONE');
+      
+      // ✅ CRITICAL: Check if payment already verified (idempotency check)
+      console.log('🔍 Checking if payment already verified...');
+      const existingPayment = await Payment.findOne({
+        stripeSessionId,
+        status: 'completed'
+      }).populate('user');
+
+      if (existingPayment) {
+        console.log('⚠️ Payment already verified, returning existing record');
+        const existingInvoice = await Invoice.findOne({ payment: existingPayment._id });
+        const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+        return { 
+          payment: existingPayment, 
+          invoice: existingInvoice, 
+          session,
+          paymentIntent: null 
+        };
+      }
       
       const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
       console.log('✓ Retrieved session:', session.id, 'Status:', session.payment_status);
@@ -110,12 +135,24 @@ class StripeService {
         throw new Error('Payment not completed');
       }
 
+      // ✅ FIX #1: Check if payment_intent exists before using it
+      if (!session.payment_intent) {
+        throw new Error('No payment intent found - session may have expired or is invalid');
+      }
+
       // Get payment intent for more details
-       const paymentIntent = await stripe.paymentIntents.retrieve(
-  session.payment_intent,
-  { expand: ['charges'] }
-);
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        session.payment_intent,
+        { expand: ['charges'] }
+      );
       console.log('✓ Retrieved payment intent:', paymentIntent.id);
+      console.log('   Payment Intent Status:', paymentIntent.status);
+
+      // ✅ FIX #4: Validate payment intent status
+      if (paymentIntent.status !== 'succeeded') {
+        throw new Error(`Payment intent status is ${paymentIntent.status}, expected 'succeeded'`);
+      }
+
       console.log('   Charges object:', paymentIntent.charges);
 
       // Update payment record
@@ -147,27 +184,37 @@ class StripeService {
       }
       console.log('✓ Updated payment record:', payment._id);
 
-      // Step 2: Ensure user exists in database
+      // Step 2: Verify user matches
       const User = require('../models/User');
-      let user = await User.findById(payment.user);
+      let user = null;
       
-      if (!user) {
-        console.log('⚠️ User not found, creating with ID:', payment.user);
-        // User doesn't exist, create it
-        user = await User.create({
-          _id: payment.user,
-          email: session.customer_email || 'test@gridcoin.local',
-          name: 'Test User',
-        });
-        console.log('✓ Created user:', user._id);
+      if (authenticatedUser) {
+        // Verify that authenticated user matches payment user
+        if (payment.user.toString() !== authenticatedUser._id.toString()) {
+          throw new Error('User mismatch: You do not have permission to verify this payment');
+        }
+        user = authenticatedUser;
+        console.log('✓ User verified:', user._id);
+      } else {
+        // No authenticated user provided - populate from payment reference
+        user = await User.findById(payment.user);
+        if (!user) {
+          throw new Error('User associated with payment not found - authentication required');
+        }
+        console.log('✓ User populated from payment:', user._id);
       }
       
       payment.user = user; // Set user object
-      console.log('✓ User ensured in database:', user._id);
+      console.log('✓ User verified in database:', user._id);
 
       // Step 3: Populate subscription and energyListing
       await payment.populate('subscription');
       await payment.populate('energyListing');
+
+      // ✅ FIX #5: Validate payment amount
+      if (!payment.amount || payment.amount <= 0) {
+        throw new Error(`Invalid payment amount: ${payment.amount}`);
+      }
 
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
@@ -184,29 +231,37 @@ class StripeService {
           throw new Error('User not populated after payment update');
         }
 
-        const invoiceData = {
-          user: payment.user._id,
-          invoiceNumber,
-          payment: payment._id,
-          amount: payment.amount,
-          totalAmount: payment.amount,
-          currency: payment.currency || 'USD',
-          status: 'paid',
-          paidDate: new Date(),
-          items: [
-            {
-              description: payment.description || 'Energy Trading Payment',
-              quantity: 1,
-              unitPrice: payment.amount,
-              amount: payment.amount,
-            },
-          ],
-        };
+        // ✅ FIX #2: Check if invoice already exists (duplicate prevention)
+        const existingInvoiceCheck = await Invoice.findOne({ payment: payment._id });
+        if (existingInvoiceCheck) {
+          console.log('✓ Invoice already exists:', existingInvoiceCheck._id);
+          invoice = existingInvoiceCheck;
+        } else {
+          // ✅ FIX #7: Normalize currency to uppercase
+          const invoiceData = {
+            user: payment.user._id,
+            invoiceNumber,
+            payment: payment._id,
+            amount: payment.amount,
+            totalAmount: payment.amount,
+            currency: (payment.currency || 'USD').toUpperCase(),
+            status: 'paid',
+            paidDate: new Date(),
+            items: [
+              {
+                description: payment.description || 'Energy Trading Payment',
+                quantity: 1,
+                unitPrice: payment.amount,
+                amount: payment.amount,
+              },
+            ],
+          };
 
-        console.log('🎯 Creating invoice with data:', invoiceData);
-        
-        invoice = await Invoice.create(invoiceData);
-        console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
+          console.log('🎯 Creating invoice with data:', invoiceData);
+          
+          invoice = await Invoice.create(invoiceData);
+          console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
+        }
       } catch (invoiceError) {
         console.error('❌ Invoice creation error:', invoiceError.message);
         console.error('❌ Full error:', invoiceError);
@@ -215,8 +270,14 @@ class StripeService {
 
       console.log('📦 Returning verification result with payment and invoice');
 
+      // ✅ FIX #6: Handle null energyListing gracefully
+      const cleanPayment = payment.toObject ? payment.toObject() : payment;
+      if (cleanPayment.energyListing === null) {
+        cleanPayment.energyListing = undefined;
+      }
+
       return {
-        payment,
+        payment: cleanPayment,
         invoice,
         session,
         paymentIntent,
@@ -232,6 +293,11 @@ class StripeService {
    */
   async refundPayment(stripePaymentIntentId, amount = null) {
     try {
+      // ✅ FIX #8: Validate refund amount
+      if (amount && amount <= 0) {
+        throw new Error('Refund amount must be positive');
+      }
+
       const refundData = {};
       if (amount) {
         refundData.amount = Math.round(amount * 100);
@@ -265,6 +331,11 @@ class StripeService {
    */
   async createBillingPortalSession(customerId) {
     try {
+      // ✅ FIX #9: Validate customer ID is provided
+      if (!customerId) {
+        throw new Error('Customer ID is required to create billing portal session');
+      }
+
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: process.env.FRONTEND_URL,

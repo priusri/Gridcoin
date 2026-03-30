@@ -65,7 +65,7 @@ class StripePaymentController {
       }
 
       console.log('🔍 Verifying session:', sessionId);
-      const result = await stripeService.verifyPayment(sessionId);
+      const result = await stripeService.verifyPayment(sessionId, req.user);
       
       console.log('✓ Verification complete');
 
