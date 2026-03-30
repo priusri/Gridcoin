@@ -339,6 +339,61 @@ class StripePaymentController {
   }
 
   /**
+   * Download invoice as PDF
+   */
+  async downloadInvoicePDF(req, res) {
+    try {
+      const { invoiceId } = req.params;
+      const user = req.user;
+
+      const invoice = await Invoice.findOne({
+        _id: invoiceId,
+        user: user._id,
+      }).populate('payment').populate('user');
+
+      if (!invoice) {
+        return res.status(404).json({ message: 'Invoice not found' });
+      }
+
+      // Generate invoice PDF buffer
+      const InvoiceGenerator = require('../utils/invoice.generator');
+      const pdfBuffer = await InvoiceGenerator.generateInvoicePDF({
+        invoiceNumber: invoice.invoiceNumber,
+        issuedDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        customerName: invoice.user?.name || 'Customer',
+        customerEmail: invoice.user?.email || '',
+        customerPhone: invoice.user?.phone || '',
+        items: invoice.items || [{
+          description: invoice.description || 'Energy Trading Payment',
+          quantity: 1,
+          unitPrice: invoice.amount / 100,
+          amount: invoice.amount / 100,
+        }],
+        subtotal: invoice.amount / 100,
+        tax: invoice.tax || 0,
+        taxPercentage: 0,
+        totalAmount: invoice.totalAmount / 100,
+        currency: invoice.currency,
+        status: invoice.status,
+      });
+
+      // Set response headers for PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
    * Get billing portal session for managing subscriptions
    */
   async getBillingPortal(req, res) {

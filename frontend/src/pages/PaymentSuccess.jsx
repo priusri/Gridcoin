@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { CheckCircle, Home, Eye } from 'lucide-react'
+import { CheckCircle, Home, Eye, Download, AlertCircle } from 'lucide-react'
 import { usePayment } from '../hooks/usePayment'
 
 export default function PaymentSuccess() {
@@ -9,6 +9,8 @@ export default function PaymentSuccess() {
   const [verified, setVerified] = useState(false)
   const [loading, setLoading] = useState(true)
   const [payment, setPayment] = useState(null)
+  const [invoice, setInvoice] = useState(null)
+  const [error, setError] = useState(null)
   const { verifyPayment } = usePayment()
 
   const sessionId = searchParams.get('session_id')
@@ -17,11 +19,13 @@ export default function PaymentSuccess() {
     if (sessionId) {
       verifyPayment(sessionId)
         .then(data => {
-          setPayment(data)
+          setPayment(data.payment)
+          setInvoice(data.invoice)
           setVerified(true)
           setLoading(false)
         })
-        .catch(() => {
+        .catch((err) => {
+          setError(err.message || 'Failed to verify payment. Please contact support.')
           setLoading(false)
         })
     }
@@ -92,63 +96,163 @@ export default function PaymentSuccess() {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              marginBottom: '16px',
+              marginBottom: '8px',
               letterSpacing: '0.05em'
             }}>
-              PAYMENT SUCCESSFUL
+              PAYMENT SUCCESSFUL ✓
             </h1>
             <p style={{
               color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: '16px',
-              marginBottom: '32px',
+              fontSize: '14px',
+              marginBottom: '24px',
               lineHeight: '1.6'
             }}>
-              Your payment has been processed successfully. Your transaction details have been saved.
+              Your payment has been processed successfully and your invoice has been generated.
             </p>
 
+            {/* Payment Details Card */}
             {payment && (
               <div style={{
                 background: 'rgba(0, 245, 255, 0.05)',
                 border: '1px solid rgba(0, 245, 255, 0.12)',
                 borderRadius: '12px',
                 padding: '20px',
-                marginBottom: '32px',
+                marginBottom: '20px',
                 textAlign: 'left',
-                fontSize: '14px'
+                fontSize: '13px'
               }}>
-                <div style={{ marginBottom: '12px' }}>
+                <h3 style={{
+                  color: '#00f5ff',
+                  marginBottom: '12px',
+                  fontSize: '14px',
+                  fontWeight: 600
+                }}>
+                  💳 Payment Details
+                </h3>
+                <div style={{ marginBottom: '8px' }}>
                   <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Amount:</span>
-                  <span style={{ color: '#00f5ff', float: 'right', fontWeight: 600 }}>
-                    {payment.amount} {payment.currency}
+                  <span style={{ color: '#00f5ff', float: 'right', fontWeight: 700 }}>
+                    ${(payment.amount / 100).toFixed(2)} {payment.currency}
                   </span>
                 </div>
-                <div style={{ marginBottom: '12px' }}>
+                <div style={{ marginBottom: '8px' }}>
                   <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Status:</span>
                   <span style={{ color: '#00ff88', float: 'right', fontWeight: 600 }}>
                     COMPLETED ✓
                   </span>
                 </div>
-                {payment.stripeSessionId && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Session ID:</span>
-                    <span style={{
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      float: 'right',
-                      wordBreak: 'break-all',
-                      fontSize: '12px'
-                    }}>
-                      {payment.stripeSessionId.substring(0, 20)}...
-                    </span>
-                  </div>
-                )}
+                <div>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Date:</span>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.7)', float: 'right', fontSize: '12px' }}>
+                    {new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Invoice Details Card */}
+            {invoice && (
+              <div style={{
+                background: 'rgba(0, 255, 136, 0.05)',
+                border: '1px solid rgba(0, 255, 136, 0.12)',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '24px',
+                textAlign: 'left',
+                fontSize: '13px'
+              }}>
+                <h3 style={{
+                  color: '#00ff88',
+                  marginBottom: '12px',
+                  fontSize: '14px',
+                  fontWeight: 600
+                }}>
+                  📄 Invoice Details
+                </h3>
+                <div style={{ marginBottom: '8px' }}>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Invoice #:</span>
+                  <span style={{ color: '#00ff88', float: 'right', fontWeight: 600, fontSize: '12px' }}>
+                    {invoice.invoiceNumber}
+                  </span>
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Total Amount:</span>
+                  <span style={{ color: '#00ff88', float: 'right', fontWeight: 600 }}>
+                    ${(invoice.totalAmount / 100).toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Status:</span>
+                  <span style={{ color: '#00ff88', float: 'right', fontWeight: 600 }}>
+                    PAID ✓
+                  </span>
+                </div>
               </div>
             )}
 
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: '12px'
+              gap: '12px',
+              marginBottom: '12px'
             }}>
+              {invoice && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+                      const token = localStorage.getItem('authToken')
+                      
+                      const response = await fetch(
+                        `${apiUrl}/payments/invoices/${invoice._id}/pdf`,
+                        {
+                          headers: {
+                            'Authorization': `Bearer ${token}`
+                          }
+                        }
+                      )
+                      
+                      if (!response.ok) throw new Error('Failed to download invoice')
+                      
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const link = document.createElement('a')
+                      link.href = url
+                      link.download = `${invoice.invoiceNumber}.pdf`
+                      link.click()
+                      window.URL.revokeObjectURL(url)
+                    } catch (err) {
+                      console.error('Download error:', err)
+                      alert('Failed to download invoice')
+                    }
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    background: 'rgba(0, 255, 136, 0.1)',
+                    border: '2px solid rgba(0, 255, 136, 0.3)',
+                    borderRadius: '8px',
+                    color: '#00ff88',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontSize: '13px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'rgba(0, 255, 136, 0.15)'
+                    e.target.style.borderColor = 'rgba(0, 255, 136, 0.5)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'rgba(0, 255, 136, 0.1)'
+                    e.target.style.borderColor = 'rgba(0, 255, 136, 0.3)'
+                  }}
+                >
+                  <Download size={16} /> INVOICE
+                </button>
+              )}
               <button
                 onClick={() => navigate('/marketplace')}
                 style={{
@@ -163,7 +267,7 @@ export default function PaymentSuccess() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
@@ -175,35 +279,39 @@ export default function PaymentSuccess() {
                   e.target.style.borderColor = 'rgba(0, 245, 255, 0.3)'
                 }}
               >
-                <Eye size={16} /> VIEW DETAILS
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                style={{
-                  padding: '12px 16px',
-                  background: 'linear-gradient(135deg, #00ff88, #00f5ff)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#0f172a',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  fontSize: '13px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.4)'
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.boxShadow = 'none'
-                }}
-              >
-                <Home size={16} /> DASHBOARD
+                <Eye size={16} /> DETAILS
               </button>
             </div>
+
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{
+                padding: '14px 24px',
+                background: 'linear-gradient(135deg, #00ff88, #00f5ff)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#0f172a',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                width: '100%',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 10px 25px rgba(0, 255, 136, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = 'none'
+              }}
+            >
+              <Home size={18} /> RETURN TO DASHBOARD
+            </button>
           </>
         ) : (
           <>
@@ -214,40 +322,80 @@ export default function PaymentSuccess() {
             <h2 style={{
               fontSize: '24px',
               fontWeight: 700,
-              color: 'white',
-              marginBottom: '8px'
+              color: '#ff4444',
+              marginBottom: '12px',
+              letterSpacing: '0.05em'
             }}>
               VERIFICATION FAILED
             </h2>
             <p style={{
-              color: 'rgba(255, 255, 255, 0.6)',
+              color: 'rgba(255, 255, 255, 0.8)',
               fontSize: '14px',
-              marginBottom: '32px'
+              marginBottom: '24px',
+              lineHeight: '1.6',
+              padding: '16px',
+              background: 'rgba(255, 68, 68, 0.05)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 68, 68, 0.1)'
             }}>
-              We couldn't verify your payment. Please contact support.
+              {error || 'We couldn\'t verify your payment. Please try again or contact support.'}
             </p>
-            <button
-              onClick={() => navigate('/marketplace')}
-              style={{
-                padding: '12px 24px',
-                background: 'linear-gradient(135deg, #ff0080, #ff8c00)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)'
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)'
-              }}
-            >
-              RETURN TO MARKETPLACE
-            </button>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px'
+            }}>
+              <button
+                onClick={() => navigate('/dashboard')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'linear-gradient(135deg, #ff6b6b, #ee5a6f)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)'
+                }}
+              >
+                <Home size={16} /> DASHBOARD
+              </button>
+              <button
+                onClick={() => navigate('/marketplace')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'rgba(0, 100, 150, 0.2)',
+                  border: '2px solid rgba(0, 150, 200, 0.3)',
+                  borderRadius: '8px',
+                  color: '#00f5ff',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(0, 150, 200, 0.1)'
+                  e.target.style.borderColor = 'rgba(0, 150, 200, 0.5)'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(0, 100, 150, 0.2)'
+                  e.target.style.borderColor = 'rgba(0, 150, 200, 0.3)'
+                }}
+              >
+                TRY AGAIN
+              </button>
+            </div>
           </>
         )}
 

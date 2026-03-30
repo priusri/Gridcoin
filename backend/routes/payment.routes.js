@@ -27,6 +27,7 @@ router.get('/billing/portal', stripePaymentController.getBillingPortal);
 
 // Invoice Routes
 router.get('/invoices/list', stripePaymentController.getInvoices);
+router.get('/invoices/:invoiceId/pdf', stripePaymentController.downloadInvoicePDF);
 
 // Webhook Routes (No auth required)
 router.post('/webhook/stripe', (req, res, next) => {
