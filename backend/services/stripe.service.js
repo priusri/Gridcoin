@@ -148,25 +148,50 @@ class StripeService {
       }
       console.log('✓ Updated payment record:', payment._id);
 
+      // Ensure user exists in database - create if missing
+      let user = payment.user;
+      
+      if (!user || !user._id) {
+        console.log('⚠️ User not populated, creating from payment user reference...');
+        
+        // Get the User model
+        const User = require('../models/User');
+        
+        // Try to use session customer email or fallback
+        const userEmail = session.customer_email || 'test@gridcoin.local';
+        const userName = 'Gridcoin User';
+        
+        // Create or get user
+        user = await User.findByIdAndUpdate(
+          payment.user ? payment.user : session.customer,
+          {
+            email: userEmail,
+            name: userName,
+          },
+          { upsert: true, new: true }
+        );
+        
+        console.log('✓ User ensured in database:', user._id);
+      }
+
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
       console.log('📄 Creating invoice:', invoiceNumber);
       console.log('   Payment info: amount=' + payment.amount + ', currency=' + payment.currency);
-      console.log('   User ID from payment:', payment.user?._id);
-      console.log('   User object:', payment.user);
+      console.log('   User ID:', user._id);
       
       let invoice = null;
       try {
         // Verify required fields
-        if (!payment.user || !payment.user._id) {
-          throw new Error('Payment user is not populated or missing _id');
+        if (!user || !user._id) {
+          throw new Error('User is missing _id after ensure step');
         }
         if (!payment._id) {
           throw new Error('Payment ID is missing');
         }
 
         const invoiceData = {
-          user: payment.user._id,
+          user: user._id,
           invoiceNumber,
           payment: payment._id,
           amount: payment.amount,
