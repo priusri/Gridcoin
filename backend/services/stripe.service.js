@@ -37,7 +37,16 @@ class StripeService {
         },
       };
 
+      console.log('🛒 Creating Stripe Session:');
+      console.log('   Success URL:', sessionData.success_url);
+      console.log('   Cancel URL:', sessionData.cancel_url);
+
       const session = await stripe.checkout.sessions.create(sessionData);
+
+      console.log('✓ Session Created:');
+      console.log('   ID:', session.id);
+      console.log('   URL:', session.url);
+      console.log('   Payment Intent:', session.payment_intent);
 
       // Save payment record with pending status
       const paymentData = {
@@ -66,6 +75,11 @@ class StripeService {
       }
 
       const payment = await Payment.create(paymentData);
+
+      console.log('✓ Payment Record Created:');
+      console.log('   ID:', payment._id);
+      console.log('   Session ID:', payment.stripeSessionId);
+      console.log('   Amount:', payment.amount);
 
       return {
         sessionId: session.id,
