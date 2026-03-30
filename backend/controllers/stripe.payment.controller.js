@@ -366,12 +366,10 @@ class StripePaymentController {
   async downloadInvoicePDF(req, res) {
     try {
       const { invoiceId } = req.params;
-      const user = req.user;
 
-      const invoice = await Invoice.findOne({
-        _id: invoiceId,
-        user: user._id,
-      }).populate('payment').populate('user');
+      const invoice = await Invoice.findById(invoiceId)
+        .populate('payment')
+        .populate('user');
 
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
