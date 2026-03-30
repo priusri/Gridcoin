@@ -113,8 +113,18 @@ class StripeService {
   { expand: ['charges'] }
 );
       console.log('✓ Retrieved payment intent:', paymentIntent.id);
+      console.log('   Charges object:', paymentIntent.charges);
 
       // Update payment record
+      let chargeId = null;
+      try {
+        if (paymentIntent.charges && paymentIntent.charges.data && paymentIntent.charges.data.length > 0) {
+          chargeId = paymentIntent.charges.data[0].id;
+        }
+      } catch (chargeError) {
+        console.warn('⚠️ Could not extract chargeId:', chargeError.message);
+      }
+
       const payment = await Payment.findOneAndUpdate(
         { stripeSessionId },
         {
@@ -122,7 +132,7 @@ class StripeService {
           status: 'completed',
           metadata: {
             stripeCustomerId: session.customer,
-            chargeId: paymentIntent.charges?.data?.[0]?.id || null,
+            chargeId: chargeId,
           },
         },
         { new: true }

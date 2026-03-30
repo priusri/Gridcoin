@@ -43,6 +43,8 @@ class StripePaymentController {
   async verifyPayment(req, res) {
     try {
       console.log('═══════════════════════════════════════');
+      console.log('✅ VERIFY ENDPOINT - VERSION 2.0');
+      console.log('═══════════════════════════════════════');
       console.log('🔄 VERIFY PAYMENT REQUEST RECEIVED');
       console.log('═══════════════════════════════════════');
       console.log('📍 Method:', req.method);
