@@ -375,27 +375,36 @@ class StripePaymentController {
         return res.status(404).json({ message: 'Invoice not found' });
       }
 
+      console.log('📋 Generating PDF for invoice:', invoiceId);
+      console.log('   Invoice items:', invoice.items);
+      console.log('   Invoice amount:', invoice.amount);
+      console.log('   Invoice totalAmount:', invoice.totalAmount);
+
       // Generate invoice PDF buffer
       const InvoiceGenerator = require('../utils/invoice.generator');
+      
+      // Ensure items array exists with proper structure
+      const items = (invoice.items && invoice.items.length > 0) ? invoice.items : [{
+        description: invoice.description || 'Payment',
+        quantity: 1,
+        unitPrice: invoice.amount || 0,
+        amount: invoice.amount || 0,
+      }];
+
       const pdfBuffer = await InvoiceGenerator.generateInvoicePDF({
         invoiceNumber: invoice.invoiceNumber,
-        issuedDate: invoice.issueDate,
+        issuedDate: invoice.issueDate || new Date(),
         dueDate: invoice.dueDate,
-        customerName: invoice.user?.name || 'Customer',
-        customerEmail: invoice.user?.email || '',
-        customerPhone: invoice.user?.phone || '',
-        items: invoice.items || [{
-          description: invoice.description || 'Energy Trading Payment',
-          quantity: 1,
-          unitPrice: invoice.amount / 100,
-          amount: invoice.amount / 100,
-        }],
-        subtotal: invoice.amount / 100,
+        customerName: (invoice.user && invoice.user.name) ? invoice.user.name : 'Customer',
+        customerEmail: (invoice.user && invoice.user.email) ? invoice.user.email : '',
+        customerPhone: (invoice.user && invoice.user.phone) ? invoice.user.phone : '',
+        items: items,
+        subtotal: invoice.amount || 0,
         tax: invoice.tax || 0,
         taxPercentage: 0,
-        totalAmount: invoice.totalAmount / 100,
-        currency: invoice.currency,
-        status: invoice.status,
+        totalAmount: invoice.totalAmount || invoice.amount || 0,
+        currency: invoice.currency || 'USD',
+        status: invoice.status || 'paid',
       });
 
       // Set response headers for PDF
@@ -405,7 +414,8 @@ class StripePaymentController {
 
       res.send(pdfBuffer);
     } catch (error) {
-      console.error('PDF generation error:', error);
+      console.error('PDF generation error:', error.message);
+      console.error('PDF error stack:', error.stack);
       res.status(500).json({
         success: false,
         message: error.message,
