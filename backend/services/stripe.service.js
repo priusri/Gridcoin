@@ -108,7 +108,10 @@ class StripeService {
       }
 
       // Get payment intent for more details
-      const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+       const paymentIntent = await stripe.paymentIntents.retrieve(
+  session.payment_intent,
+  { expand: ['charges'] }
+);
       console.log('✓ Retrieved payment intent:', paymentIntent.id);
 
       // Update payment record
