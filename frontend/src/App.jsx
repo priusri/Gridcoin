@@ -7,6 +7,7 @@ import MyEnergy from './pages/MyEnergy'
 import Transactions from './pages/Transactions'
 import Wallet from './pages/Wallet'
 import PaymentSuccess from './pages/PaymentSuccess'
+import PaymentDetails from './pages/PaymentDetails'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="my-energy" element={<MyEnergy />} />
             <Route path="transactions" element={<Transactions />} />
             <Route path="wallet" element={<Wallet />} />
+            <Route path="payment/:paymentId" element={<PaymentDetails />} />
           </Route>
           <Route path="payment-success" element={<PaymentSuccess />} />
         </Routes>

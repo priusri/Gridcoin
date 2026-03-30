@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import usePayment from '../../hooks/usePayment';
 import './PaymentHistory.css';
 
 const PaymentHistory = () => {
+  const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedPayment, setSelectedPayment] = useState(null);
-  const { getPaymentHistory, getPaymentDetails, error } = usePayment();
+  const { getPaymentHistory, error } = usePayment();
 
   useEffect(() => {
     fetchPayments();
@@ -32,16 +33,8 @@ const PaymentHistory = () => {
     }
   };
 
-  const handleViewDetails = async (paymentId) => {
-    try {
-      setLoading(true);
-      const details = await getPaymentDetails(paymentId);
-      setSelectedPayment(details);
-    } catch (err) {
-      console.error('Failed to fetch payment details:', err);
-    } finally {
-      setLoading(false);
-    }
+  const handleViewDetails = (paymentId) => {
+    navigate(`/payment/${paymentId}`);
   };
 
   const getStatusBadge = (status) => {
@@ -72,78 +65,6 @@ const PaymentHistory = () => {
   const formatAmount = (amount) => {
     return `$${(amount / 100).toFixed(2)}`;
   };
-
-  if (selectedPayment) {
-    return (
-      <div className="payment-history">
-        <div className="payment-details-view">
-          <button
-            onClick={() => setSelectedPayment(null)}
-            className="btn-back"
-          >
-            ← Back to History
-          </button>
-
-          <div className="details-card">
-            <h2>Payment Details</h2>
-
-            <div className="details-grid">
-              <div className="detail-row">
-                <label>Session ID:</label>
-                <span className="detail-value">{selectedPayment.stripeSessionId}</span>
-              </div>
-
-              <div className="detail-row">
-                <label>Payment Intent:</label>
-                <span className="detail-value">{selectedPayment.stripePaymentIntentId || 'N/A'}</span>
-              </div>
-
-              <div className="detail-row">
-                <label>Amount:</label>
-                <span className="detail-value">{formatAmount(selectedPayment.amount)}</span>
-              </div>
-
-              <div className="detail-row">
-                <label>Status:</label>
-                <span className="detail-value">{getStatusBadge(selectedPayment.status)}</span>
-              </div>
-
-              <div className="detail-row">
-                <label>Type:</label>
-                <span className="detail-value">{selectedPayment.type}</span>
-              </div>
-
-              <div className="detail-row">
-                <label>Date:</label>
-                <span className="detail-value">{formatDate(selectedPayment.createdAt)}</span>
-              </div>
-
-              {selectedPayment.energyListingId && (
-                <div className="detail-row">
-                  <label>Energy Listing:</label>
-                  <span className="detail-value">{selectedPayment.energyListingId}</span>
-                </div>
-              )}
-
-              {selectedPayment.refundedAt && (
-                <div className="detail-row">
-                <label>Refunded At:</label>
-                  <span className="detail-value">{formatDate(selectedPayment.refundedAt)}</span>
-                </div>
-              )}
-
-              {selectedPayment.refundReason && (
-                <div className="detail-row">
-                  <label>Refund Reason:</label>
-                  <span className="detail-value">{selectedPayment.refundReason}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="payment-history">
