@@ -148,50 +148,23 @@ class StripeService {
       }
       console.log('✓ Updated payment record:', payment._id);
 
-      // Ensure user exists in database - create if missing
-      let user = payment.user;
-      
-      if (!user || !user._id) {
-        console.log('⚠️ User not populated, creating from payment user reference...');
-        
-        // Get the User model
-        const User = require('../models/User');
-        
-        // Try to use session customer email or fallback
-        const userEmail = session.customer_email || 'test@gridcoin.local';
-        const userName = 'Gridcoin User';
-        
-        // Create or get user
-        user = await User.findByIdAndUpdate(
-          payment.user ? payment.user : session.customer,
-          {
-            email: userEmail,
-            name: userName,
-          },
-          { upsert: true, new: true }
-        );
-        
-        console.log('✓ User ensured in database:', user._id);
-      }
-
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
       console.log('📄 Creating invoice:', invoiceNumber);
       console.log('   Payment info: amount=' + payment.amount + ', currency=' + payment.currency);
-      console.log('   User ID:', user._id);
+      console.log('   Populated user:', payment.user);
       
       let invoice = null;
       try {
-        // Verify required fields
-        if (!user || !user._id) {
-          throw new Error('User is missing _id after ensure step');
-        }
-        if (!payment._id) {
-          throw new Error('Payment ID is missing');
+        // Verify user is populated
+        if (!payment.user || !payment.user._id) {
+          console.error('❌ User not populated after findOneAndUpdate');
+          console.error('   Payment object:', JSON.stringify(payment, null, 2));
+          throw new Error('User not populated after payment update');
         }
 
         const invoiceData = {
-          user: user._id,
+          user: payment.user._id,
           invoiceNumber,
           payment: payment._id,
           amount: payment.amount,
@@ -209,15 +182,13 @@ class StripeService {
           ],
         };
 
-        console.log('🎯 Invoice data to be created:', invoiceData);
+        console.log('🎯 Creating invoice with data:', invoiceData);
         
         invoice = await Invoice.create(invoiceData);
         console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
       } catch (invoiceError) {
         console.error('❌ Invoice creation error:', invoiceError.message);
-        console.error('❌ Invoice error details:', invoiceError);
-        console.error('❌ Invoice error stack:', invoiceError.stack);
-        // THROW the error instead of silently failing
+        console.error('❌ Full error:', invoiceError);
         throw new Error(`Invoice creation failed: ${invoiceError.message}`);
       }
 
