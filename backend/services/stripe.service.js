@@ -109,7 +109,9 @@ class StripeService {
           },
         },
         { new: true }
-      ).populate('user');
+      ).populate('user')
+       .populate('subscription')
+       .populate('energyListing');
 
       if (!payment) {
         throw new Error('Payment record not found');
@@ -119,27 +121,40 @@ class StripeService {
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
       console.log('📄 Creating invoice:', invoiceNumber);
+      console.log('   Payment info: amount=' + payment.amount + ', currency=' + payment.currency);
       
-      const invoice = await Invoice.create({
-        user: payment.user._id,
-        invoiceNumber,
-        payment: payment._id,
-        amount: payment.amount,
-        totalAmount: payment.amount,
-        currency: payment.currency,
-        status: 'paid',
-        paidDate: new Date(),
-        items: [
-          {
-            description: payment.description || 'Energy Trading Payment',
-            quantity: 1,
-            unitPrice: payment.amount,
-            amount: payment.amount,
-          },
-        ],
-      });
-      
-      console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
+      let invoice = null;
+      try {
+        invoice = await Invoice.create({
+          user: payment.user._id,
+          invoiceNumber,
+          payment: payment._id,
+          amount: payment.amount,
+          totalAmount: payment.amount,
+          currency: payment.currency || 'USD',
+          status: 'paid',
+          paidDate: new Date(),
+          items: [
+            {
+              description: payment.description || 'Energy Trading Payment',
+              quantity: 1,
+              unitPrice: payment.amount,
+              amount: payment.amount,
+            },
+          ],
+        });
+        console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
+      } catch (invoiceError) {
+        console.error('⚠️ Invoice creation error:', invoiceError.message);
+        console.error('⚠️ Invoice error details:', invoiceError);
+        // Don't throw, just log warning
+        invoice = {
+          _id: 'INVOICE_CREATION_FAILED',
+          invoiceNumber: invoiceNumber,
+          error: invoiceError.message
+        };
+      }
+
       console.log('📦 Returning verification result with payment and invoice');
 
       return {
