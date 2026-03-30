@@ -128,6 +128,7 @@ class StripeService {
         console.warn('⚠️ Could not extract chargeId:', chargeError.message);
       }
 
+      // Step 1: Update payment
       const payment = await Payment.findOneAndUpdate(
         { stripeSessionId },
         {
@@ -139,14 +140,27 @@ class StripeService {
           },
         },
         { new: true }
-      ).populate('user')
-       .populate('subscription')
-       .populate('energyListing');
+      );
 
       if (!payment) {
         throw new Error('Payment record not found');
       }
       console.log('✓ Updated payment record:', payment._id);
+
+      // Step 2: Populate separately (more reliable) 
+      await payment.populate('user');
+      await payment.populate('subscription');
+      await payment.populate('energyListing');
+      
+      console.log('✓ Populated references - User:', payment.user ? 'YES' : 'NO');
+      
+      // Step 3: Verify user exists
+      if (!payment.user || !payment.user._id) {
+        console.error('❌ User not found after populate');
+        console.error('   Payment.user field:', payment.user);
+        console.error('   Payment.user._id:', payment.user?._id);
+        throw new Error('User not found for this payment');
+      }
 
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;

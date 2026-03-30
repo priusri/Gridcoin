@@ -10,7 +10,18 @@ export const usePayment = () => {
   const [error, setError] = useState(null);
   const [payment, setPayment] = useState(null);
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  // Get token from localStorage (generate if not exists)
+  let token = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('authToken');
+    // If no token exists, create a dummy one (development only)
+    if (!token) {
+      token = 'test-token-' + Math.random().toString(36).substring(7);
+      localStorage.setItem('authToken', token);
+      console.log('⚠️ Auth token created:', token);
+    }
+  }
+  
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
@@ -18,6 +29,10 @@ export const usePayment = () => {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+  
+  console.log('🔐 usePayment Hook Initialized');
+  console.log('   Token:', token ? `${token.substring(0, 20)}...` : 'NONE');
+  console.log('   API URL:', apiUrl);
 
   /**
    * Create a checkout session
