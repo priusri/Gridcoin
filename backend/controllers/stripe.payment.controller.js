@@ -48,7 +48,12 @@ class StripePaymentController {
         return res.status(400).json({ message: 'Session ID is required' });
       }
 
+      console.log('🔄 Verify Payment Request - Session ID:', sessionId);
       const result = await stripeService.verifyPayment(sessionId);
+      
+      console.log('✓ Verification complete. Returning result with:');
+      console.log('  - Payment ID:', result.payment?._id);
+      console.log('  - Invoice ID:', result.invoice?._id);
 
       res.status(200).json({
         success: true,
@@ -56,6 +61,7 @@ class StripePaymentController {
         data: result,
       });
     } catch (error) {
+      console.error('✗ Verify Payment Error:', error.message);
       res.status(400).json({
         success: false,
         message: error.message,

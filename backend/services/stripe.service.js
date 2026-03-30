@@ -84,7 +84,10 @@ class StripeService {
    */
   async verifyPayment(stripeSessionId) {
     try {
+      console.log('🔍 Verifying payment for session:', stripeSessionId);
+      
       const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+      console.log('✓ Retrieved session:', session.id, 'Status:', session.payment_status);
 
       if (session.payment_status !== 'paid') {
         throw new Error('Payment not completed');
@@ -92,6 +95,7 @@ class StripeService {
 
       // Get payment intent for more details
       const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+      console.log('✓ Retrieved payment intent:', paymentIntent.id);
 
       // Update payment record
       const payment = await Payment.findOneAndUpdate(
@@ -110,9 +114,12 @@ class StripeService {
       if (!payment) {
         throw new Error('Payment record not found');
       }
+      console.log('✓ Updated payment record:', payment._id);
 
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
+      console.log('📄 Creating invoice:', invoiceNumber);
+      
       const invoice = await Invoice.create({
         user: payment.user._id,
         invoiceNumber,
@@ -131,6 +138,9 @@ class StripeService {
           },
         ],
       });
+      
+      console.log('✓ Created invoice:', invoice._id, invoice.invoiceNumber);
+      console.log('📦 Returning verification result with payment and invoice');
 
       return {
         payment,
@@ -139,6 +149,7 @@ class StripeService {
         paymentIntent,
       };
     } catch (error) {
+      console.error('✗ Payment verification error:', error.message);
       throw new Error(`Payment verification failed: ${error.message}`);
     }
   }

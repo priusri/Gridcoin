@@ -19,12 +19,16 @@ export default function PaymentSuccess() {
     if (sessionId) {
       verifyPayment(sessionId)
         .then(data => {
+          console.log('✓ Verify Payment Response:', data)
+          console.log('  - Payment:', data.payment)
+          console.log('  - Invoice:', data.invoice)
           setPayment(data.payment)
           setInvoice(data.invoice)
           setVerified(true)
           setLoading(false)
         })
         .catch((err) => {
+          console.error('✗ Verify Payment Error:', err)
           setError(err.message || 'Failed to verify payment. Please contact support.')
           setLoading(false)
         })
