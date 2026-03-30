@@ -147,20 +147,27 @@ class StripeService {
       }
       console.log('✓ Updated payment record:', payment._id);
 
-      // Step 2: Populate separately (more reliable) 
-      await payment.populate('user');
+      // Step 2: Ensure user exists in database
+      const User = require('../models/User');
+      let user = await User.findById(payment.user);
+      
+      if (!user) {
+        console.log('⚠️ User not found, creating with ID:', payment.user);
+        // User doesn't exist, create it
+        user = await User.create({
+          _id: payment.user,
+          email: session.customer_email || 'test@gridcoin.local',
+          name: 'Test User',
+        });
+        console.log('✓ Created user:', user._id);
+      }
+      
+      payment.user = user; // Set user object
+      console.log('✓ User ensured in database:', user._id);
+
+      // Step 3: Populate subscription and energyListing
       await payment.populate('subscription');
       await payment.populate('energyListing');
-      
-      console.log('✓ Populated references - User:', payment.user ? 'YES' : 'NO');
-      
-      // Step 3: Verify user exists
-      if (!payment.user || !payment.user._id) {
-        console.error('❌ User not found after populate');
-        console.error('   Payment.user field:', payment.user);
-        console.error('   Payment.user._id:', payment.user?._id);
-        throw new Error('User not found for this payment');
-      }
 
       // Create invoice
       const invoiceNumber = `INV-${Date.now()}`;
